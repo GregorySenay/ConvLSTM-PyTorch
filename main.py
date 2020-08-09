@@ -149,6 +149,7 @@ def train():
         tens = tens.resize(t_s[0]*t_s[1], t_s[2], t_s[3], t_s[4])
         tens = up_(tens)
         tens = tens.resize(t_s[0], t_s[1], t_s[2], tens.size(2), tens.size(3))
+        tens = tens.repeat(1,1,3,1,1)
         return tens
 
         
@@ -164,8 +165,6 @@ def train():
             net.train()
             inputs = up_sample(inputs)
             label = up_sample(label)
-            inputs = inputs.repeat(1,1,3,1,1)
-            label = label.repeat(1,1,3,1,1)
             
             #print(inputs.size())
             pred = net(inputs)  # B,S,C,H,W
@@ -205,7 +204,10 @@ def train():
                     'validloss': '{:.6f}'.format(loss_aver),
                     'epoch': '{:02d}'.format(epoch)
                 })
-
+        # SAve the last inputs and pred
+        torch.save(inputs.cpu(), 'images/inputs.pt') 
+        torch.save(pred.cpu(), 'images/pred.pt') 
+        torch.save(label.cpu(), 'images/label.pt') 
         tb.add_scalar('ValidLoss', loss_aver, epoch)
         torch.cuda.empty_cache()
         # print training/validation statistics
