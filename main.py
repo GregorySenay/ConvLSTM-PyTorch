@@ -193,6 +193,8 @@ def train():
                     break
                 inputs = inputVar.to(device)
                 label = targetVar.to(device)
+                inputs = up_sample(inputs)
+                label = up_sample(label)
                 pred = net(inputs)
                 loss = lossfunction(pred, label)
                 loss_aver = loss.item() / args.batch_size
