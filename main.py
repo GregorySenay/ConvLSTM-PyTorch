@@ -10,11 +10,10 @@
 '''
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 from encoder import Encoder
 from decoder import Decoder
 from model import ED
-from net_params import convlstm_encoder_params, convlstm_decoder_params, convgru_encoder_params, convgru_decoder_params
+from weather_params import convlstm_encoder_params, convlstm_decoder_params, convgru_encoder_params, convgru_decoder_params
 from data.mm import MovingMNIST
 import torch
 from torch import nn
@@ -28,7 +27,7 @@ from tensorboardX import SummaryWriter
 import argparse
 
 TIMESTAMP = "2020-03-09T00-00-00"
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('-clstm',
                     '--convlstm',
                     help='use convlstm as base cell',
@@ -69,12 +68,14 @@ trainFolder = MovingMNIST(is_train=True,
                           root='data/',
                           n_frames_input=args.frames_input,
                           n_frames_output=args.frames_output,
-                          num_objects=[3])
+                          num_objects=[3],
+                          image_size=64)
 validFolder = MovingMNIST(is_train=False,
                           root='data/',
                           n_frames_input=args.frames_input,
                           n_frames_output=args.frames_output,
-                          num_objects=[3])
+                          num_objects=[3],
+                          image_size=64)
 trainLoader = torch.utils.data.DataLoader(trainFolder,
                                           batch_size=args.batch_size,
                                           shuffle=False)
@@ -100,6 +101,7 @@ def train():
     encoder = Encoder(encoder_params[0], encoder_params[1]).cuda()
     decoder = Decoder(decoder_params[0], decoder_params[1]).cuda()
     net = ED(encoder, decoder)
+    print(net)
     run_dir = './runs/' + TIMESTAMP
     if not os.path.isdir(run_dir):
         os.makedirs(run_dir)
@@ -109,7 +111,8 @@ def train():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     if torch.cuda.device_count() > 1:
-        net = nn.DataParallel(net)
+        print("Let's use", torch.cuda.device_count(), "GPUs!")
+        net = nn.DataParallel(net, device_ids=[0,1,2,3])
     net.to(device)
 
     if os.path.exists(os.path.join(save_dir, 'checkpoint.pth.tar')):
@@ -140,6 +143,15 @@ def train():
     # to track the average validation loss per epoch as the model trains
     avg_valid_losses = []
     # mini_val_loss = np.inf
+    up_ = torch.nn.UpsamplingBilinear2d(size=(256,256))
+    def up_sample(tens):
+        t_s = tens.size()
+        tens = tens.resize(t_s[0]*t_s[1], t_s[2], t_s[3], t_s[4])
+        tens = up_(tens)
+        tens = tens.resize(t_s[0], t_s[1], t_s[2], tens.size(2), tens.size(3))
+        return tens
+
+        
     for epoch in range(cur_epoch, args.epochs + 1):
         ###################
         # train the model #
@@ -150,7 +162,15 @@ def train():
             label = targetVar.to(device)  # B,S,C,H,W
             optimizer.zero_grad()
             net.train()
+            inputs = up_sample(inputs)
+            label = up_sample(label)
+            inputs = inputs.repeat(1,1,3,1,1)
+            label = label.repeat(1,1,3,1,1)
+            
+            #print(inputs.size())
             pred = net(inputs)  # B,S,C,H,W
+            #print(pred.size())
+            
             loss = lossfunction(pred, label)
             loss_aver = loss.item() / args.batch_size
             train_losses.append(loss_aver)

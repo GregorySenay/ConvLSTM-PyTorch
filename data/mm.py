@@ -6,6 +6,7 @@ from PIL import Image
 import random
 import torch
 import torch.utils.data as data
+from torchvision import transforms
 
 def load_mnist(root):
     # Load MNIST dataset for generating training data.
@@ -27,7 +28,7 @@ def load_fixed_set(root, is_train):
 
 class MovingMNIST(data.Dataset):
     def __init__(self, root, is_train, n_frames_input, n_frames_output, num_objects,
-                 transform=None):
+                 transform=None, image_size=64):
         '''
         param num_objects: a list of number of possible objects.
         '''
@@ -50,7 +51,7 @@ class MovingMNIST(data.Dataset):
         self.n_frames_total = self.n_frames_input + self.n_frames_output
         self.transform = transform
         # For generating data
-        self.image_size_ = 64
+        self.image_size_ = image_size
         self.digit_size_ = 28
         self.step_length_ = 0.1
 
@@ -122,11 +123,11 @@ class MovingMNIST(data.Dataset):
         else:
             images = self.dataset[:, idx, ...]
 
-        # if self.transform is not None:
-        #     images = self.transform(images)
+        #if self.transform is not None:
+        #    images = self.transform(images)
 
         r = 1
-        w = int(64 / r)
+        w = int(self.image_size_ / r)
         images = images.reshape((length, w, r, w, r)).transpose(0, 2, 4, 1, 3).reshape((length, r * r, w, w))
 
         input = images[:self.n_frames_input]

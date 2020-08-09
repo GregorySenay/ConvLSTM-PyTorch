@@ -42,6 +42,8 @@ class Decoder(nn.Module):
                                        getattr(self, 'stage3'),
                                        getattr(self, 'rnn3'))
         for i in list(range(1, self.blocks))[::-1]:
+            # print('stage' + str(i))
+            # print('rnn' + str(i))
             inputs = self.forward_by_stage(inputs, hidden_states[i - 1],
                                            getattr(self, 'stage' + str(i)),
                                            getattr(self, 'rnn' + str(i)))
@@ -80,4 +82,4 @@ if __name__ == "__main__":
         state = encoder(inputs)
         break
     output = decoder(state)
-    print(output.shape)  # S,B,1,64,64
+    #print(output.shape)  # S,B,1,64,64

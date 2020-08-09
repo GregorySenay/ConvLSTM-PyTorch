@@ -49,7 +49,8 @@ class CGRU_cell(nn.Module):
                                 self.shape[0], self.shape[1]).cuda()
             else:
                 x = inputs[index, ...]
-
+            # print(self)
+            # print(x.size(), htprev.size())
             combined_1 = torch.cat((x, htprev), 1)  # X_t + H_t-1
             gates = self.conv1(combined_1)  # W * (X_t + H_t-1)
 

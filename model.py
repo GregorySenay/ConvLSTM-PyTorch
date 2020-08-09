@@ -32,5 +32,6 @@ class ED(nn.Module):
 
     def forward(self, input):
         state = self.encoder(input)
+        # print("---decoder--")
         output = self.decoder(state)
         return output
